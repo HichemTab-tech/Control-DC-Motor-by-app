@@ -1,5 +1,8 @@
 package com.hichemtabtech.controldcmotor;
 
+import static com.hichemtabtech.controldcmotor.fragments.SettingsFragment.openGitHub;
+
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -14,10 +17,10 @@ import com.hichemtabtech.controldcmotor.databinding.ActivitySplashBinding;
  * Splash screen activity that displays the app logo for a few seconds
  * before transitioning to the main activity.
  */
+@SuppressLint("CustomSplashScreen")
 public class SplashActivity extends AppCompatActivity {
 
     private static final long SPLASH_DISPLAY_TIME = 2000; // 2 seconds
-    private ActivitySplashBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,7 +33,7 @@ public class SplashActivity extends AppCompatActivity {
         );
         
         // Use view binding
-        binding = ActivitySplashBinding.inflate(getLayoutInflater());
+        ActivitySplashBinding binding = ActivitySplashBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         // Delay for SPLASH_DISPLAY_TIME and then start MainActivity
@@ -39,5 +42,8 @@ public class SplashActivity extends AppCompatActivity {
             startActivity(mainIntent);
             finish();
         }, SPLASH_DISPLAY_TIME);
+
+        // Set up click listeners
+        binding.tvPoweredBy.setOnClickListener(v -> openGitHub(this));
     }
 }

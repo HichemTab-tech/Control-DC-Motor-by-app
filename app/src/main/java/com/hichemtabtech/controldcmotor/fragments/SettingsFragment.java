@@ -11,13 +11,11 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
-import com.hichemtabtech.controldcmotor.R;
 import com.hichemtabtech.controldcmotor.databinding.FragmentSettingsBinding;
 
 /**
@@ -27,7 +25,6 @@ public class SettingsFragment extends Fragment {
 
     private FragmentSettingsBinding binding;
     private SharedPreferences preferences;
-    private ActivityResultLauncher<String> getContent;
     
     // Constants for preferences
     private static final String PREFS_NAME = "DCMotorControlPrefs";
@@ -35,7 +32,6 @@ public class SettingsFragment extends Fragment {
     private static final String PREF_MESSAGE_FORMAT = "messageFormat";
     private static final String PREF_DEFAULT_DIRECTION = "defaultDirection";
     private static final String PREF_DEFAULT_SPEED = "defaultSpeed";
-    private static final String PREF_CUSTOM_LOGO_URI = "customLogoUri";
     
     // Default values
     private static final String DEFAULT_MESSAGE_FORMAT = "{direction},{speed}";
@@ -51,18 +47,6 @@ public class SettingsFragment extends Fragment {
         
         // Initialize SharedPreferences
         preferences = requireActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        
-        // Initialize activity result launcher for image selection
-        getContent = registerForActivityResult(new ActivityResultContracts.GetContent(),
-                uri -> {
-                    if (uri != null) {
-                        // Save the selected image URI
-                        saveCustomLogoUri(uri.toString());
-                        
-                        // Display the selected image
-                        binding.ivCustomLogo.setImageURI(uri);
-                    }
-                });
     }
 
     @Nullable
@@ -86,7 +70,7 @@ public class SettingsFragment extends Fragment {
         binding.spinnerBaudRate.setAdapter(baudRateAdapter);
         
         // Set up click listeners
-        binding.btnUploadLogo.setOnClickListener(v -> selectImage());
+        binding.tvPoweredBy.setOnClickListener(v -> openGitHub((AppCompatActivity) requireActivity()));
         binding.btnSaveSettings.setOnClickListener(v -> saveSettings());
         
         // Load saved settings
@@ -127,15 +111,7 @@ public class SettingsFragment extends Fragment {
         binding.tvDefaultSpeedValue.setText(String.valueOf(defaultSpeed));
         
         // Set up speed slider listener
-        binding.sliderDefaultSpeed.addOnChangeListener((slider, value, fromUser) -> {
-            binding.tvDefaultSpeedValue.setText(String.valueOf((int) value));
-        });
-        
-        // Load custom logo
-        String customLogoUri = preferences.getString(PREF_CUSTOM_LOGO_URI, null);
-        if (customLogoUri != null) {
-            binding.ivCustomLogo.setImageURI(Uri.parse(customLogoUri));
-        }
+        binding.sliderDefaultSpeed.addOnChangeListener((slider, value, fromUser) -> binding.tvDefaultSpeedValue.setText(String.valueOf((int) value)));
     }
 
     /**
@@ -169,26 +145,8 @@ public class SettingsFragment extends Fragment {
         Toast.makeText(requireContext(), "Settings saved", Toast.LENGTH_SHORT).show();
     }
 
-    /**
-     * Launch image selection intent.
-     */
-    private void selectImage() {
-        getContent.launch("image/*");
-    }
-
-    /**
-     * Save the URI of the selected custom logo.
-     *
-     * @param uriString The URI of the selected image as a string.
-     */
-    private void saveCustomLogoUri(String uriString) {
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString(PREF_CUSTOM_LOGO_URI, uriString);
-        editor.apply();
-    }
-
-    public void openGitHub() {
-        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HichemTab-tech/ControlDCMotor2"));
-        startActivity(browserIntent);
+    public static void openGitHub(AppCompatActivity activity) {
+        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HichemTab-tech"));
+        activity.startActivity(browserIntent);
     }
 }

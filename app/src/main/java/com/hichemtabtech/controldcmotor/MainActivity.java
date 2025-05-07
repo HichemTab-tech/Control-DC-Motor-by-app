@@ -2,9 +2,19 @@ package com.hichemtabtech.controldcmotor;
 
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothSocket;
+import android.content.Intent;
+import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -61,16 +71,11 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
             @NonNull
             @Override
             public Fragment createFragment(int position) {
-                switch (position) {
-                    case 0:
-                        return mainFragment;
-                    case 1:
-                        return settingsFragment;
-                    case 2:
-                        return testFragment;
-                    default:
-                        return mainFragment;
-                }
+                return switch (position) {
+                    case 1 -> settingsFragment;
+                    case 2 -> testFragment;
+                    default -> mainFragment;
+                };
             }
 
             @Override
@@ -134,11 +139,37 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
      * Show the about dialog.
      */
     private void showAboutDialog() {
-        new AlertDialog.Builder(this)
+        SpannableString message = new SpannableString(
+                "DC Motor Control App\nVersion 1.0\n\nA modern Android app for controlling DC motors via Bluetooth.\n\nVisit GitHub Repository"
+        );
+
+        // Set a clickable span for the "Visit GitHub Repository" text
+        message.setSpan(new ClickableSpan() {
+            @Override
+            public void onClick(@NonNull View widget) {
+                // Open your GitHub repo in the browser
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HichemTab-tech/Control-DC-Motor-by-app"));
+                widget.getContext().startActivity(browserIntent);
+            }
+
+            @Override
+            public void updateDrawState(@NonNull TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setColor(Color.BLUE); // Set link color
+                ds.setUnderlineText(true); // Underline the link
+            }
+        }, message.length() - "Visit GitHub Repository".length(), message.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("About")
-                .setMessage("DC Motor Control App\nVersion 1.0\n\nA modern Android app for controlling DC motors via Bluetooth.")
+                .setMessage(message)
                 .setPositiveButton("OK", null)
-                .show();
+                .create();
+
+        // Required for clickable spans in a TextView
+        dialog.show();
+        ((TextView) dialog.findViewById(android.R.id.message)).setMovementMethod(LinkMovementMethod.getInstance());
+
     }
 
     /**
