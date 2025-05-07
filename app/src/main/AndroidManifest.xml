@@ -43,6 +43,18 @@
                 android:exported="false"
                 android:label="@string/app_name"
                 android:theme="@style/Theme.ControlDCMotor" />
+
+        <!-- Developer Metadata for External Use -->
+        <meta-data
+                android:name="developer_name"
+                android:value="HichemTab-tech" />
+        <meta-data
+                android:name="developer_website"
+                android:value="https://github.com/HichemTab-tech" />
+        <meta-data
+                android:name="contact_email"
+                android:value="hichem.tab2002@gmail.com" />
+
     </application>
 
 </manifest>
