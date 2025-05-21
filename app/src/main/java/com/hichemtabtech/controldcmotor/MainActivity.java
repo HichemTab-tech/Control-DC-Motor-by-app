@@ -1,9 +1,15 @@
 package com.hichemtabtech.controldcmotor;
 
+import static com.hichemtabtech.controldcmotor.fragments.SettingsFragment.PREFS_NAME;
+import static com.hichemtabtech.controldcmotor.fragments.SettingsFragment.PREF_THEME_COLOR;
+
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothSocket;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.SpannableString;
@@ -22,6 +28,7 @@ import androidx.fragment.app.Fragment;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.hichemtabtech.controldcmotor.databinding.ActivityMainBinding;
@@ -29,6 +36,8 @@ import com.hichemtabtech.controldcmotor.fragments.MainFragment;
 import com.hichemtabtech.controldcmotor.fragments.SettingsFragment;
 import com.hichemtabtech.controldcmotor.fragments.TestFragment;
 import com.hichemtabtech.controldcmotor.utils.BluetoothConnectionManager;
+
+import java.util.Objects;
 
 /**
  * Main activity that hosts the fragments for the different sections of the app.
@@ -45,6 +54,9 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
 
     private BluetoothConnectionManager connectionManager;
     private boolean isConnected = false;
+
+    private FragmentStateAdapter pagerAdapter;
+    private TabLayoutMediator tabLayoutMediator;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,8 +78,8 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         viewPager = binding.viewPager;
         tabLayout = binding.tabLayout;
 
-        // Set up ViewPager with fragments
-        viewPager.setAdapter(new FragmentStateAdapter(this) {
+        // Create a custom adapter for the ViewPager
+        FragmentStateAdapter pagerAdapter = new FragmentStateAdapter(this) {
             @NonNull
             @Override
             public Fragment createFragment(int position) {
@@ -80,24 +92,20 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
 
             @Override
             public int getItemCount() {
-                return 3; // Number of tabs
+                // When not connected, only show the main fragment
+                return isConnected ? 3 : 2;
             }
-        });
+        };
+
+        // Set the adapter
+        viewPager.setAdapter(pagerAdapter);
 
         // Connect TabLayout with ViewPager
-        new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            switch (position) {
-                case 0:
-                    tab.setText(R.string.control_panel);
-                    break;
-                case 1:
-                    tab.setText(R.string.settings);
-                    break;
-                case 2:
-                    tab.setText(R.string.test);
-                    break;
-            }
-        }).attach();
+        TabLayoutMediator tabLayoutMediator = getTabLayoutMediator();
+
+        // Store the adapter and mediator for later use
+        this.pagerAdapter = pagerAdapter;
+        this.tabLayoutMediator = tabLayoutMediator;
 
         // Set up page change listener
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -111,6 +119,36 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
                 }
             }
         });
+
+        SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        int themeColor = preferences.getInt(PREF_THEME_COLOR, getResources().getColor(R.color.primary, getTheme()));
+        findViewById(R.id.toolbar).setBackgroundColor(Color.TRANSPARENT);
+        findViewById(R.id.headerLayout).setBackgroundColor(themeColor);
+        findViewById(R.id.tabLayout).setBackgroundColor(themeColor);
+        // from themeColor
+        Objects.requireNonNull(getSupportActionBar()).setBackgroundDrawable(new ColorDrawable(themeColor));
+        AppBarLayout appBarLayout = findViewById(R.id.appBarLayout);
+        appBarLayout.setBackgroundColor(themeColor);
+
+    }
+
+    @NonNull
+    private TabLayoutMediator getTabLayoutMediator() {
+        TabLayoutMediator tabLayoutMediator = new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
+            switch (position) {
+                case 0:
+                    tab.setText(R.string.control_panel);
+                    break;
+                case 1:
+                    tab.setText(R.string.settings);
+                    break;
+                case 2:
+                    tab.setText(R.string.test);
+                    break;
+            }
+        });
+        tabLayoutMediator.attach();
+        return tabLayoutMediator;
     }
 
     @Override
@@ -183,6 +221,9 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
 
         // Update the test fragment with the connection manager
         testFragment.setConnectionManager(connectionManager, true);
+
+        // Update the ViewPager adapter to show all tabs
+        updateViewPagerForConnectionState();
     }
 
     /**
@@ -194,6 +235,9 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
 
         // Update the test fragment with the connection manager
         testFragment.setConnectionManager(connectionManager, false);
+
+        // Update the ViewPager adapter to show only the main tab
+        updateViewPagerForConnectionState();
     }
 
     /**
@@ -205,5 +249,32 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
 
         // Update the test fragment with the connection manager
         testFragment.setConnectionManager(connectionManager, false);
+
+        // Update the ViewPager adapter to show only the main tab
+        updateViewPagerForConnectionState();
+    }
+
+    /**
+     * Update the ViewPager adapter based on the connection state.
+     */
+    private void updateViewPagerForConnectionState() {
+        // Save the current position
+        int currentPosition = viewPager.getCurrentItem();
+
+        // Detach the mediator
+        tabLayoutMediator.detach();
+
+        // Notify the adapter that the data set has changed
+        pagerAdapter.notifyDataSetChanged();
+
+        // Reattach the mediator
+        tabLayoutMediator.attach();
+
+        // Set the current position (if it's valid)
+        if (currentPosition < pagerAdapter.getItemCount()) {
+            viewPager.setCurrentItem(currentPosition, false);
+        } else {
+            viewPager.setCurrentItem(0, false);
+        }
     }
 }
