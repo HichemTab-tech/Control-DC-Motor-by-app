@@ -1,9 +1,5 @@
 package com.hichemtabtech.controldcmotor.fragments;
 
-import static com.hichemtabtech.controldcmotor.fragments.SettingsFragment.PREFS_NAME;
-import static com.hichemtabtech.controldcmotor.fragments.SettingsFragment.PREF_THEME_COLOR;
-
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -14,13 +10,13 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,6 +38,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.hichemtabtech.controldcmotor.MainActivity;
 import com.hichemtabtech.controldcmotor.R;
 import com.hichemtabtech.controldcmotor.adapters.BluetoothDeviceAdapter;
 import com.hichemtabtech.controldcmotor.databinding.FragmentMainBinding;
@@ -62,7 +59,6 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
 
     private FragmentMainBinding binding;
     private BluetoothAdapter bluetoothAdapter;
-    private BluetoothConnectionManager connectionManager;
     private final List<BluetoothDevice> deviceList = new ArrayList<>();
     private BluetoothDeviceAdapter deviceAdapter;
 
@@ -72,7 +68,7 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
     private int speed = 0; // Default speed: 0
 
     // Chart related fields
-    private LineChart responseTimeChart;
+    private LineChart responseChart;
     private LineDataSet commandDataSet;
     private LineDataSet responseDataSet;
     private final ArrayList<Entry> commandEntries = new ArrayList<>();
@@ -98,9 +94,67 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         // Initialize Bluetooth adapter
         BluetoothManager bluetoothManager = (BluetoothManager) requireActivity().getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
+        BluetoothConnectionManager.getInstance().addCallback(new BluetoothConnectionManager.ConnectionCallback() {
+            @Override
+            public void onConnected(BluetoothSocket socket) {
+                // Update UI on main thread
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    ((MainActivity)requireActivity()).onConnected(socket);
+                    isConnected = true;
+                    binding.tvBluetoothStatus.setText(R.string.bluetooth_connected);
+                    binding.tvBluetoothStatus.setTextColor(requireContext().getColor(R.color.connected));
 
-        // Initialize connection manager
-        connectionManager = new BluetoothConnectionManager();
+                    // Enable control panel
+                    enableControls();
+                    Toast.makeText(requireContext(), "Connected to a device (please see permissions)", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onConnectionFailed() {
+                // Update UI on main thread
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    ((MainActivity)requireActivity()).onConnectionFailed();
+                    binding.tvBluetoothStatus.setText(R.string.bluetooth_disconnected);
+                    binding.tvBluetoothStatus.setTextColor(requireContext().getColor(R.color.disconnected));
+
+                    Toast.makeText(requireContext(), R.string.error_bluetooth_connection, Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onDisconnected() {
+                // Update UI on main thread
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    isConnected = false;
+                    isRunning = false;
+                    binding.tvBluetoothStatus.setText(R.string.bluetooth_disconnected);
+                    binding.tvBluetoothStatus.setTextColor(requireContext().getColor(R.color.disconnected));
+
+                    // Disable control panel
+                    disableControls();
+
+                    Toast.makeText(requireContext(), "Disconnected", Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            @Override
+            public void onReceive(String receivedData) {
+                //split data if ist has "speed:"
+                String[] data = receivedData.split(":");
+                if (data.length > 1) {
+                    try {
+                        // Parse the response time
+                        float response = Float.parseFloat(data[1]);
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> addResponseToChart(response));
+                        }
+                    } catch (NumberFormatException e) {
+                        Log.d("MainFragment", "Invalid response time format: " + data[1]);
+                    }
+                }
+            }
+        });
     }
 
     @Nullable
@@ -182,8 +236,8 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         }
 
         // Disconnect from device
-        if (connectionManager != null) {
-            connectionManager.disconnect();
+        if (BluetoothConnectionManager.getInstance() != null) {
+            BluetoothConnectionManager.getInstance().disconnect();
         }
 
         binding = null;
@@ -279,53 +333,7 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         binding.tvBluetoothStatus.setTextColor(requireContext().getColor(R.color.connecting));
 
         // Connect to device
-        connectionManager.connect(device, MY_UUID, new BluetoothConnectionManager.ConnectionCallback() {
-            @Override
-            public void onConnected(BluetoothSocket socket) {
-                // Update UI on main thread
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    isConnected = true;
-                    binding.tvBluetoothStatus.setText(R.string.bluetooth_connected);
-                    binding.tvBluetoothStatus.setTextColor(requireContext().getColor(R.color.connected));
-
-                    // Enable control panel
-                    enableControls();
-
-                    if (ActivityCompat.checkSelfPermission(requireActivity(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                        Toast.makeText(requireContext(), "Connected to a device (please see permissions)", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    Toast.makeText(requireContext(), "Connected to " + device.getName(), Toast.LENGTH_SHORT).show();
-                });
-            }
-
-            @Override
-            public void onConnectionFailed() {
-                // Update UI on main thread
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    binding.tvBluetoothStatus.setText(R.string.bluetooth_disconnected);
-                    binding.tvBluetoothStatus.setTextColor(requireContext().getColor(R.color.disconnected));
-
-                    Toast.makeText(requireContext(), R.string.error_bluetooth_connection, Toast.LENGTH_SHORT).show();
-                });
-            }
-
-            @Override
-            public void onDisconnected() {
-                // Update UI on main thread
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    isConnected = false;
-                    isRunning = false;
-                    binding.tvBluetoothStatus.setText(R.string.bluetooth_disconnected);
-                    binding.tvBluetoothStatus.setTextColor(requireContext().getColor(R.color.disconnected));
-
-                    // Disable control panel
-                    disableControls();
-
-                    Toast.makeText(requireContext(), "Disconnected", Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
+        BluetoothConnectionManager.getInstance().connect(device, MY_UUID);
     }
 
     private void startMotor() {
@@ -380,13 +388,7 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         long commandTime = System.currentTimeMillis();
 
         // Send the command
-        connectionManager.sendData(command, responseTime -> {
-            // This callback will be called when a response is received
-            // Update the chart with the response time
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> addResponseTimeToChart(responseTime));
-            }
-        });
+        BluetoothConnectionManager.getInstance().sendData(command);
     }
 
     private void enableControls() {
@@ -409,36 +411,36 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
      */
     private void initializeChart() {
         // Get chart from layout
-        responseTimeChart = binding.responseTimeChart;
+        responseChart = binding.responseTimeChart;
 
         // Configure chart appearance
-        responseTimeChart.setDrawGridBackground(false);
-        responseTimeChart.setDrawBorders(false);
-        responseTimeChart.setTouchEnabled(true);
-        responseTimeChart.setDragEnabled(true);
-        responseTimeChart.setScaleEnabled(true);
-        responseTimeChart.setPinchZoom(true);
-        responseTimeChart.setDoubleTapToZoomEnabled(true);
+        responseChart.setDrawGridBackground(false);
+        responseChart.setDrawBorders(false);
+        responseChart.setTouchEnabled(true);
+        responseChart.setDragEnabled(true);
+        responseChart.setScaleEnabled(true);
+        responseChart.setPinchZoom(true);
+        responseChart.setDoubleTapToZoomEnabled(true);
 
         // Set description
         Description description = new Description();
-        description.setText("Response Time (ms)");
+        description.setText("Response");
         description.setTextSize(12f);
-        responseTimeChart.setDescription(description);
+        responseChart.setDescription(description);
 
         // Configure X axis
-        XAxis xAxis = responseTimeChart.getXAxis();
+        XAxis xAxis = responseChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setDrawGridLines(false);
         xAxis.setGranularity(1f);
 
         // Configure Y axis
-        YAxis leftAxis = responseTimeChart.getAxisLeft();
+        YAxis leftAxis = responseChart.getAxisLeft();
         leftAxis.setDrawGridLines(true);
         leftAxis.setAxisMinimum(0f);
 
         // Disable right Y axis
-        responseTimeChart.getAxisRight().setEnabled(false);
+        responseChart.getAxisRight().setEnabled(false);
 
         // Create data sets
         commandDataSet = new LineDataSet(commandEntries, "Command");
@@ -461,23 +463,23 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
 
         // Create line data with both data sets
         LineData lineData = new LineData(commandDataSet, responseDataSet);
-        responseTimeChart.setData(lineData);
+        responseChart.setData(lineData);
 
         // Refresh chart
-        responseTimeChart.invalidate();
+        responseChart.invalidate();
     }
 
     /**
      * Add a command-response pair to the chart.
      *
-     * @param responseTime The response time in milliseconds.
+     * @param response The response value.
      */
-    private void addResponseTimeToChart(long responseTime) {
+    private void addResponseToChart(float response) {
         // Add command entry
         commandEntries.add(new Entry(chartXIndex, 0));
 
         // Add response entry
-        responseEntries.add(new Entry(chartXIndex, responseTime));
+        responseEntries.add(new Entry(chartXIndex, response));
 
         // Increment X index
         chartXIndex++;
@@ -487,13 +489,13 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         responseDataSet.notifyDataSetChanged();
 
         // Update chart data
-        responseTimeChart.getData().notifyDataChanged();
-        responseTimeChart.notifyDataSetChanged();
+        responseChart.getData().notifyDataChanged();
+        responseChart.notifyDataSetChanged();
 
         // Refresh chart
-        responseTimeChart.invalidate();
+        responseChart.invalidate();
 
         // Scroll to the latest entry
-        responseTimeChart.moveViewToX(chartXIndex - 1);
+        responseChart.moveViewToX(chartXIndex - 1);
     }
 }

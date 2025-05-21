@@ -11,6 +11,7 @@ import androidx.annotation.RequiresPermission;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -31,21 +32,70 @@ public class BluetoothConnectionManager {
     private ConnectionCallback callback;
     private boolean stopReading = false;
 
+    private static BluetoothConnectionManager instance;
+
+    private ArrayList<ConnectionCallback> callbacks = new ArrayList<>();
+
     public BluetoothConnectionManager() {
         executor = Executors.newSingleThreadExecutor();
+        callback = new ConnectionCallback() {
+            @Override
+            public void onConnected(BluetoothSocket socket) {
+                for (ConnectionCallback callback : callbacks) {
+                    callback.onConnected(socket);
+                }
+            }
 
+            @Override
+            public void onConnectionFailed() {
+                for (ConnectionCallback callback : callbacks) {
+                    callback.onConnectionFailed();
+                }
+            }
+
+            @Override
+            public void onDisconnected() {
+                for (ConnectionCallback callback : callbacks) {
+                    callback.onDisconnected();
+                }
+            }
+
+            @Override
+            public void onReceive(String receivedData) {
+                ConnectionCallback.super.onReceive(receivedData);
+                for (ConnectionCallback callback : callbacks) {
+                    callback.onReceive(receivedData);
+                }
+            }
+        };
     }
+
+    public static BluetoothConnectionManager getInstance() {
+        if (instance == null) {
+            // Create the instance if it doesn't exist
+            instance = new BluetoothConnectionManager();
+        }
+        return instance; // Return the same instance every time
+    }
+
+    public void addCallback(ConnectionCallback callback) {
+        callbacks.add(callback);
+    }
+
+    public void removeCallback(ConnectionCallback callback) {
+        callbacks.remove(callback);
+    }
+
+
 
     /**
      * Connect to a Bluetooth device.
      *
      * @param device The Bluetooth device to connect to.
      * @param uuid The UUID for the connection.
-     * @param callback The callback to notify of connection events.
      */
     @RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-    public void connect(BluetoothDevice device, UUID uuid, ConnectionCallback callback) {
-        this.callback = callback;
+    public void connect(BluetoothDevice device, UUID uuid) {
 
         // Disconnect any existing connection
         disconnect();
@@ -94,39 +144,19 @@ public class BluetoothConnectionManager {
         closeConnection();
     }
 
-    /**
-     * Interface for response time callback.
-     */
-    public interface ResponseTimeCallback {
-        /**
-         * Called when a response is received.
-         *
-         * @param responseTime The response time in milliseconds.
-         */
-        void onResponseReceived(long responseTime);
-    }
-
     // Map to store command send times
     private final Map<String, Long> commandSendTimes = new HashMap<>();
-
-    /**
-     * Send data to the connected Bluetooth device.
-     *
-     * @param data The data to send.
-     */
-    public void sendData(String data) {
-        sendData(data, null);
-    }
 
     /**
      * Send data to the connected Bluetooth device with response time tracking.
      *
      * @param data The data to send.
-     * @param callback The callback to notify of response time.
      */
-    public void sendData(String data, ResponseTimeCallback callback) {
+    public void sendData(String data) {
         if (!isConnected || outputStream == null) {
             Log.e(TAG, "Error sending data: not connected");
+            Log.e(TAG, "isConnected: " + isConnected);
+            Log.e(TAG, "outputstream: " + outputStream);
             return;
         }
         Log.e(TAG, "data sent.");
@@ -138,19 +168,6 @@ public class BluetoothConnectionManager {
             // Store send time if callback is provided
             if (callback != null) {
                 commandSendTimes.put(data, sendTime);
-
-                // Schedule a response simulation (for testing)
-                // In a real implementation, this would be triggered by actual device response
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    // Calculate response time (random between 50-200ms for demo)
-                    long responseTime = 50 + (long) (Math.random() * 150);
-
-                    // Remove the command from the map
-                    commandSendTimes.remove(data);
-
-                    // Notify callback
-                    callback.onResponseReceived(responseTime);
-                }, 100); // Simulate a delay before response
             }
 
             // Add newline character to end of message
@@ -169,31 +186,38 @@ public class BluetoothConnectionManager {
      * Start reading data from the connected Bluetooth device.
      */
     private void startReading() {
-        stopReading = false;
+        if (bluetoothSocket == null || !bluetoothSocket.isConnected()) {
+            Log.e(TAG, "Socket is not connected, cannot start reading.");
+            return;
+        }
+
+        stopReading = false; // Reset stopReading flag to allow reading
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+
 
         executor.execute(() -> {
-            byte[] buffer = new byte[1024];
-            int bytes;
+            try {
+                inputStream = bluetoothSocket.getInputStream(); // Ensure stream is initialized
+                byte[] buffer = new byte[1024]; // Buffer for received data
+                int bytes;
 
-            // Keep reading data until stopped
-            while (!stopReading && isConnected) {
-                try {
-                    // Read data from the input stream
-                    bytes = inputStream.read(buffer);
+                while (!stopReading) { // Keep listening until stopped
+                    // Check if data is available to read
+                    if ((bytes = inputStream.read(buffer)) > 0) {
+                        String receivedData = new String(buffer, 0, bytes); // Convert bytes to string
+                        Log.d(TAG, "Received: " + receivedData);
 
-                    if (bytes > 0) {
-                        // Convert the bytes to a string
-                        String data = new String(buffer, 0, bytes);
-                        Log.d(TAG, "Data received: " + data);
-
-                        // Process the data (not implemented in this example)
-                        // processReceivedData(data);
+                        // Notify/further process received data (optional)
+                        if (callback != null) {
+                            mainHandler.post(() -> {
+                                callback.onReceive(receivedData);
+                            });
+                        }
                     }
-                } catch (IOException e) {
-                    Log.e(TAG, "Error reading data: " + e.getMessage());
-                    handleDisconnection();
-                    break;
                 }
+            } catch (IOException e) {
+                Log.e(TAG, "Error reading input stream: " + e.getMessage());
+                handleDisconnection();
             }
         });
     }
@@ -262,5 +286,12 @@ public class BluetoothConnectionManager {
          * Called when disconnected from a device.
          */
         void onDisconnected();
+
+        /**
+         * Called when disconnected from a device.
+         */
+        default void onReceive(String receivedData) {
+            Log.d("RECEIVED", receivedData);
+        }
     }
 }

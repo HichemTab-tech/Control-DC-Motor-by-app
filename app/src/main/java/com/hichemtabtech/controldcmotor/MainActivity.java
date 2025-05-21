@@ -3,6 +3,7 @@ package com.hichemtabtech.controldcmotor;
 import static com.hichemtabtech.controldcmotor.fragments.SettingsFragment.PREFS_NAME;
 import static com.hichemtabtech.controldcmotor.fragments.SettingsFragment.PREF_THEME_COLOR;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
@@ -17,6 +18,7 @@ import android.text.Spanned;
 import android.text.TextPaint;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ClickableSpan;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -25,6 +27,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -45,18 +49,23 @@ import java.util.Objects;
 public class MainActivity extends AppCompatActivity implements BluetoothConnectionManager.ConnectionCallback {
 
     private ActivityMainBinding binding;
-    private ViewPager2 viewPager;
+    public ViewPager2 viewPager;
     private TabLayout tabLayout;
 
     private MainFragment mainFragment;
     private SettingsFragment settingsFragment;
     private TestFragment testFragment;
-
-    private BluetoothConnectionManager connectionManager;
-    private boolean isConnected = false;
+    public boolean isConnected = false;
 
     private FragmentStateAdapter pagerAdapter;
     private TabLayoutMediator tabLayoutMediator;
+
+    private final MutableLiveData<BluetoothSocket> connectionLiveData = new MutableLiveData<>();
+
+    public LiveData<BluetoothSocket> getConnectionLiveData() {
+        return connectionLiveData;
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,9 +79,6 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         mainFragment = new MainFragment();
         settingsFragment = new SettingsFragment();
         testFragment = new TestFragment();
-
-        // Initialize connection manager
-        connectionManager = new BluetoothConnectionManager();
 
         // Initialize ViewPager and TabLayout
         viewPager = binding.viewPager;
@@ -106,19 +112,6 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         // Store the adapter and mediator for later use
         this.pagerAdapter = pagerAdapter;
         this.tabLayoutMediator = tabLayoutMediator;
-
-        // Set up page change listener
-        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-            @Override
-            public void onPageSelected(int position) {
-                super.onPageSelected(position);
-
-                // Update the test fragment with the connection manager when navigating to it
-                if (position == 2) {
-                    testFragment.setConnectionManager(connectionManager, isConnected);
-                }
-            }
-        });
 
         SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         int themeColor = preferences.getInt(PREF_THEME_COLOR, getResources().getColor(R.color.primary, getTheme()));
@@ -218,9 +211,8 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     @Override
     public void onConnected(BluetoothSocket socket) {
         isConnected = true;
-
-        // Update the test fragment with the connection manager
-        testFragment.setConnectionManager(connectionManager, true);
+        connectionLiveData.postValue(socket); // Notify observers
+        Log.d("MainActivity.log", "onConnected: Connected to device");
 
         // Update the ViewPager adapter to show all tabs
         updateViewPagerForConnectionState();
@@ -232,9 +224,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     @Override
     public void onConnectionFailed() {
         isConnected = false;
-
-        // Update the test fragment with the connection manager
-        testFragment.setConnectionManager(connectionManager, false);
+        connectionLiveData.postValue(null); // Notify observers
 
         // Update the ViewPager adapter to show only the main tab
         updateViewPagerForConnectionState();
@@ -246,9 +236,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     @Override
     public void onDisconnected() {
         isConnected = false;
-
-        // Update the test fragment with the connection manager
-        testFragment.setConnectionManager(connectionManager, false);
+        connectionLiveData.postValue(null); // Notify observers
 
         // Update the ViewPager adapter to show only the main tab
         updateViewPagerForConnectionState();
@@ -257,6 +245,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
     /**
      * Update the ViewPager adapter based on the connection state.
      */
+    @SuppressLint("NotifyDataSetChanged")
     private void updateViewPagerForConnectionState() {
         // Save the current position
         int currentPosition = viewPager.getCurrentItem();
