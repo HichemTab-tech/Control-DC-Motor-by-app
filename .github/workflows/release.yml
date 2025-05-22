@@ -5,6 +5,10 @@ on:
     types:
       - published
 
+permissions:
+  contents: write
+
+
 jobs:
   build:
     name: Build and Sign APK
