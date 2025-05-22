@@ -52,7 +52,7 @@ jobs:
       # Step 7: Optimize APK with zipalign
       - name: Optimize APK with zipalign
         run: |
-          $ANDROID_HOME/build-tools/*/zipalign -v -p 4 \
+          $ANDROID_HOME/build-tools/35.0.0/zipalign -v -p 4 \
             app/build/outputs/apk/release/app-release-unsigned.apk \
             app/build/outputs/apk/release/app-release.apk
 
