@@ -1,3 +1,5 @@
 # Project exclude paths
 /.gradle/
 /build/
+app/release
+key.jks
