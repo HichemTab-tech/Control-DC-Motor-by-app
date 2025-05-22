@@ -48,7 +48,6 @@ import java.util.Objects;
  */
 public class MainActivity extends AppCompatActivity implements BluetoothConnectionManager.ConnectionCallback {
 
-    private ActivityMainBinding binding;
     public ViewPager2 viewPager;
     private TabLayout tabLayout;
 
@@ -72,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
         super.onCreate(savedInstanceState);
 
         // Use view binding
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        com.hichemtabtech.controldcmotor.databinding.ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         // Initialize fragments
@@ -115,7 +114,6 @@ public class MainActivity extends AppCompatActivity implements BluetoothConnecti
 
         SharedPreferences preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         int themeColor = preferences.getInt(PREF_THEME_COLOR, getResources().getColor(R.color.primary, getTheme()));
-        findViewById(R.id.toolbar).setBackgroundColor(Color.TRANSPARENT);
         findViewById(R.id.headerLayout).setBackgroundColor(themeColor);
         findViewById(R.id.tabLayout).setBackgroundColor(themeColor);
         // from themeColor

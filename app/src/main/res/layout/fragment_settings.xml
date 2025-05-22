@@ -226,49 +226,6 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/tvAppearanceSettingsTitle" />
 
-                <RadioGroup
-                    android:id="@+id/rgThemeColor"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvAppThemeColor">
-
-                    <RadioButton
-                        android:id="@+id/rbColorGreen"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:text="Green" />
-
-                    <RadioButton
-                        android:id="@+id/rbColorBlue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:text="Blue" />
-
-                    <RadioButton
-                        android:id="@+id/rbColorRed"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:text="Red" />
-                </RadioGroup>
-
-                <Button
-                        android:id="@+id/btnPickColor"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:gravity="center"
-                        android:text="Pick a Color"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toBottomOf="@+id/rgThemeColor" />
-
                 <!-- Color Preview -->
                 <View
                     android:id="@+id/colorPreview"
@@ -278,7 +235,7 @@
                     android:background="@color/teal_700"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/btnPickColor" />
+                    app:layout_constraintTop_toBottomOf="@+id/tvAppThemeColor" />
 
                 <TextView
                     android:id="@+id/tvColorPreviewLabel"
@@ -296,14 +253,26 @@
 
         <!-- Save Button -->
         <Button
-            android:id="@+id/btnSaveSettings"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/save_settings"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/cardAppearanceSettings" />
+                android:id="@+id/btnSaveSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/save_settings"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/cardAppearanceSettings" />
+
+        <!-- Save Button -->
+        <Button
+                android:id="@+id/btnResetSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/white"
+                android:textColor="@color/black"
+                android:text="@string/reset_settings"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/btnSaveSettings" />
 
         <!-- "Powered by HichemTab" Text -->
         <TextView
@@ -311,6 +280,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Powered by HichemTab-tech"
+                android:visibility="gone"
                 android:textColor="@color/teal_700"
                 android:textSize="16sp"
                 android:textStyle="bold"

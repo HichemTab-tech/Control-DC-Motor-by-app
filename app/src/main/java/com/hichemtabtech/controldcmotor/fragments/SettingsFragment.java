@@ -33,13 +33,13 @@ public class SettingsFragment extends Fragment {
     // Constants for preferences
     public static final String PREFS_NAME = "DCMotorControlPrefs";
     private static final String PREF_BAUD_RATE = "baudRate";
-    private static final String PREF_MESSAGE_FORMAT = "messageFormat";
-    private static final String PREF_DEFAULT_DIRECTION = "defaultDirection";
+    public static final String PREF_MESSAGE_FORMAT = "messageFormat";
+    public static final String PREF_DEFAULT_DIRECTION = "defaultDirection";
     private static final String PREF_DEFAULT_SPEED = "defaultSpeed";
     public static final String PREF_THEME_COLOR = "themeColor";
 
     // Default values
-    private static final String DEFAULT_MESSAGE_FORMAT = "{direction},{speed}";
+    public static final String DEFAULT_MESSAGE_FORMAT = "{direction},{speed}";
     private static final String DEFAULT_DIRECTION = "f";
     private static final int DEFAULT_SPEED = 0;
 
@@ -80,7 +80,7 @@ public class SettingsFragment extends Fragment {
         binding.tvPoweredBy.setOnClickListener(v -> openGitHub((AppCompatActivity) requireActivity()));
         binding.btnSaveSettings.setOnClickListener(v -> saveSettings());
 
-        binding.btnPickColor.setOnClickListener(v -> {
+        binding.colorPreview.setOnClickListener(v -> {
             AmbilWarnaDialog colorPicker = new AmbilWarnaDialog(requireContext(), currentColor, new AmbilWarnaDialog.OnAmbilWarnaListener() {
                 @Override
                 public void onCancel(AmbilWarnaDialog dialog) {
@@ -105,6 +105,33 @@ public class SettingsFragment extends Fragment {
 
         // Load saved settings
         loadSettings();
+
+        binding.etMessageFormat.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) {
+                String messageFormat = binding.etMessageFormat.getText().toString();
+                if (!messageFormat.contains("{speed}") || !messageFormat.contains("{direction}")) {
+                    binding.etMessageFormat.setError("Message format must contain {speed} and {direction}");
+                }
+            }
+        });
+
+        binding.btnResetSettings.setOnClickListener(v -> {
+
+            // show confirmation dialog
+            new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("Reset Settings")
+                    .setMessage("Are you sure you want to reset settings to default?")
+                    .setPositiveButton("Yes", (dialog, which) -> {
+                        // Reset settings to default values
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.clear();
+                        editor.apply();
+                        Toast.makeText(requireContext(), "Settings reset to default", Toast.LENGTH_SHORT).show();
+                        requireActivity().recreate();
+                    })
+                    .setNegativeButton("No", null)
+                    .show();
+        });
     }
 
     /**

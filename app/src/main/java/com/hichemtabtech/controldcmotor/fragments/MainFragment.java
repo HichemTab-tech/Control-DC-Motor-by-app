@@ -1,5 +1,9 @@
 package com.hichemtabtech.controldcmotor.fragments;
 
+import static com.hichemtabtech.controldcmotor.fragments.SettingsFragment.DEFAULT_MESSAGE_FORMAT;
+import static com.hichemtabtech.controldcmotor.fragments.SettingsFragment.PREFS_NAME;
+import static com.hichemtabtech.controldcmotor.fragments.SettingsFragment.PREF_MESSAGE_FORMAT;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -10,6 +14,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
@@ -38,6 +43,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.hichemtabtech.controldcmotor.MainActivity;
 import com.hichemtabtech.controldcmotor.R;
 import com.hichemtabtech.controldcmotor.adapters.BluetoothDeviceAdapter;
@@ -47,6 +53,7 @@ import com.hichemtabtech.controldcmotor.utils.BluetoothConnectionManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -73,7 +80,8 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
     private LineDataSet responseDataSet;
     private final ArrayList<Entry> commandEntries = new ArrayList<>();
     private final ArrayList<Entry> responseEntries = new ArrayList<>();
-    private int chartXIndex = 0;
+    private long startTime = 0;
+    private float timeWindow = 3.0f; // Default time window in seconds
 
     private final ActivityResultLauncher<Intent> enableBluetoothLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -142,7 +150,7 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
             public void onReceive(String receivedData) {
                 //split data if ist has "speed:"
                 String[] data = receivedData.split(":");
-                if (data.length > 1) {
+                if (data.length > 1 && data[0].equals("speed")) {
                     try {
                         // Parse the response time
                         float response = Float.parseFloat(data[1]);
@@ -179,6 +187,10 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         binding.btnStop.setOnClickListener(v -> stopMotor());
         binding.btnReset.setOnClickListener(v -> resetConnection());
 
+        // Set up chart zoom buttons
+        binding.btnZoomIn.setOnClickListener(v -> changeTimeWindow(timeWindow / 2));
+        binding.btnZoomOut.setOnClickListener(v -> changeTimeWindow(timeWindow * 2));
+
         // Set up direction switch
         binding.switchDirection.setOnCheckedChangeListener((buttonView, isChecked) -> {
             direction = isChecked ? "b" : "f";
@@ -192,7 +204,13 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
 
             // If motor is running, update speed in real time
             if (isRunning) {
-                sendCommand(direction + "," + speed);
+                SharedPreferences preferences = requireActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+                String messageFormat = preferences.getString(PREF_MESSAGE_FORMAT, DEFAULT_MESSAGE_FORMAT);
+                String formattedMessage = messageFormat
+                        .replace("{speed}", String.valueOf(speed))
+                        .replace("{direction}", direction);
+                // Send command to start motor
+                sendCommand(formattedMessage);
             }
         });
 
@@ -339,8 +357,13 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
     private void startMotor() {
         if (!isConnected) return;
 
+        SharedPreferences preferences = requireActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String messageFormat = preferences.getString(PREF_MESSAGE_FORMAT, DEFAULT_MESSAGE_FORMAT);
+        String formattedMessage = messageFormat
+                .replace("{speed}", String.valueOf(speed))
+                .replace("{direction}", direction);
         // Send command to start motor
-        sendCommand(direction + "," + speed);
+        sendCommand(formattedMessage);
 
         // Update UI
         isRunning = true;
@@ -381,11 +404,32 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         speed = 0;
     }
 
+    /**
+     * Change the time window for the chart.
+     * 
+     * @param newTimeWindow The new time window in seconds.
+     */
+    private void changeTimeWindow(float newTimeWindow) {
+        // Limit the time window to a reasonable range (0.5 to 10 seconds)
+        timeWindow = Math.max(0.5f, Math.min(10f, newTimeWindow));
+
+        // Log the new time window
+        Log.d("Chart", "Time window changed to: " + timeWindow + " seconds");
+
+        // Update the chart immediately to reflect the new time window
+        float currentTime = (System.currentTimeMillis() - startTime) / 1000f;
+        float cutoffTime = currentTime - timeWindow;
+
+        // Set visible range to show the last timeWindow seconds
+        responseChart.getXAxis().setAxisMinimum(cutoffTime);
+        responseChart.getXAxis().setAxisMaximum(currentTime);
+
+        // Refresh chart
+        responseChart.invalidate();
+    }
+
     private void sendCommand(String command) {
         if (!isConnected) return;
-
-        // Record the time when the command is sent
-        long commandTime = System.currentTimeMillis();
 
         // Send the command
         BluetoothConnectionManager.getInstance().sendData(command);
@@ -418,13 +462,16 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         responseChart.setDrawBorders(false);
         responseChart.setTouchEnabled(true);
         responseChart.setDragEnabled(true);
-        responseChart.setScaleEnabled(true);
-        responseChart.setPinchZoom(true);
+
+        // Allow zooming only on X axis
+        responseChart.setScaleXEnabled(true);
+        responseChart.setScaleYEnabled(false);
+        responseChart.setPinchZoom(false);
         responseChart.setDoubleTapToZoomEnabled(true);
 
         // Set description
         Description description = new Description();
-        description.setText("Response");
+        description.setText("Response over time");
         description.setTextSize(12f);
         responseChart.setDescription(description);
 
@@ -432,15 +479,27 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         XAxis xAxis = responseChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setDrawGridLines(false);
-        xAxis.setGranularity(1f);
+        xAxis.setGranularity(0.1f); // More granular for time-based data
+        xAxis.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                // Format as seconds with one decimal place
+                return String.format(Locale.ENGLISH, "%.1fs", value);
+            }
+        });
 
         // Configure Y axis
         YAxis leftAxis = responseChart.getAxisLeft();
         leftAxis.setDrawGridLines(true);
         leftAxis.setAxisMinimum(0f);
+        leftAxis.setAxisMaximum(255f); // Set max value to 255 as requested
+        leftAxis.setGranularity(25f);
 
         // Disable right Y axis
         responseChart.getAxisRight().setEnabled(false);
+
+        // Initialize start time
+        startTime = System.currentTimeMillis();
 
         // Create data sets
         commandDataSet = new LineDataSet(commandEntries, "Command");
@@ -450,7 +509,7 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         commandDataSet.setCircleRadius(3f);
         commandDataSet.setDrawCircleHole(false);
         commandDataSet.setValueTextSize(9f);
-        commandDataSet.setDrawValues(false);
+        commandDataSet.setDrawValues(true); // Show values
 
         responseDataSet = new LineDataSet(responseEntries, "Response");
         responseDataSet.setColor(Color.RED);
@@ -459,7 +518,7 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         responseDataSet.setCircleRadius(3f);
         responseDataSet.setDrawCircleHole(false);
         responseDataSet.setValueTextSize(9f);
-        responseDataSet.setDrawValues(false);
+        responseDataSet.setDrawValues(true); // Show values
 
         // Create line data with both data sets
         LineData lineData = new LineData(commandDataSet, responseDataSet);
@@ -475,14 +534,35 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
      * @param response The response value.
      */
     private void addResponseToChart(float response) {
-        // Add command entry
-        commandEntries.add(new Entry(chartXIndex, 0));
+        // Calculate time in seconds since start
+        float timeInSeconds = (System.currentTimeMillis() - startTime) / 1000f;
+
+        // Add command entry (current speed from slider)
+        commandEntries.add(new Entry(timeInSeconds, speed));
 
         // Add response entry
-        responseEntries.add(new Entry(chartXIndex, response));
+        responseEntries.add(new Entry(timeInSeconds, response));
 
-        // Increment X index
-        chartXIndex++;
+        // Remove entries older than timeWindow seconds
+        float cutoffTime = timeInSeconds - timeWindow;
+
+        // Remove old command entries
+        for (int i = commandEntries.size() - 1; i >= 0; i--) {
+            if (commandEntries.get(i).getX() < cutoffTime) {
+                commandEntries.remove(i);
+            } else {
+                break; // Entries are in time order, so we can stop once we find one that's recent enough
+            }
+        }
+
+        // Remove old response entries
+        for (int i = responseEntries.size() - 1; i >= 0; i--) {
+            if (responseEntries.get(i).getX() < cutoffTime) {
+                responseEntries.remove(i);
+            } else {
+                break; // Entries are in time order, so we can stop once we find one that's recent enough
+            }
+        }
 
         // Update data sets
         commandDataSet.notifyDataSetChanged();
@@ -492,10 +572,14 @@ public class MainFragment extends Fragment implements BluetoothDeviceListener {
         responseChart.getData().notifyDataChanged();
         responseChart.notifyDataSetChanged();
 
+        // Set visible range to show the last timeWindow seconds
+        responseChart.getXAxis().setAxisMinimum(cutoffTime);
+        responseChart.getXAxis().setAxisMaximum(timeInSeconds);
+
+        // Log the current values (since we don't have a TextView for this)
+        Log.d("Chart", "Speed: " + speed + ", Response: " + response);
+
         // Refresh chart
         responseChart.invalidate();
-
-        // Scroll to the latest entry
-        responseChart.moveViewToX(chartXIndex - 1);
     }
 }
