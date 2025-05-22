@@ -15,25 +15,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Set up JDK
+      # Step 2: Set permissions for gradlew
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # Step 3: Set up JDK
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
           distribution: 'adopt'
           java-version: '17' # Adjust to your project Java version
 
-      # Step 3: Decode and save the keystore file
+      # Step 4: Decode and save the keystore file
       - name: Decode keystore
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > key.jks
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
-      # Step 4: Build the release APK
+      # Step 5: Build the release APK
       - name: Build release APK
         run: ./gradlew assembleRelease
 
-      # Step 5: Sign the release APK
+      # Step 6: Sign the release APK
       - name: Sign APK
         run: |
           jarsigner -verbose \
@@ -45,14 +49,14 @@ jobs:
             app/build/outputs/apk/release/app-release-unsigned.apk \
             ${{ secrets.KEY_ALIAS }}
 
-      # Step 6: Optimize APK with zipalign
+      # Step 7: Optimize APK with zipalign
       - name: Optimize APK with zipalign
         run: |
           $ANDROID_HOME/build-tools/*/zipalign -v -p 4 \
             app/build/outputs/apk/release/app-release-unsigned.apk \
             app/build/outputs/apk/release/app-release.apk
 
-      # Step 7: Upload the signed APK as an artifact
+      # Step 8: Upload the signed APK as an artifact
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
