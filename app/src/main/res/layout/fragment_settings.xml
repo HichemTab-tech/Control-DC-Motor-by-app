@@ -21,6 +21,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+
         <!-- Serial Communication Settings -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardSerialSettings"
@@ -188,16 +189,90 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Save Button -->
-        <Button
-            android:id="@+id/btnSaveSettings"
+        <!-- Appearance Settings -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardAppearanceSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/save_settings"
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="4dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/cardControlSettings" />
+            app:layout_constraintTop_toBottomOf="@+id/cardControlSettings">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/tvAppearanceSettingsTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Appearance Settings"
+                    android:textAppearance="?attr/textAppearanceHeadline6"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <!-- App Theme Color -->
+                <TextView
+                    android:id="@+id/tvAppThemeColor"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="App Theme Color"
+                    android:textAppearance="?attr/textAppearanceBody1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tvAppearanceSettingsTitle" />
+
+                <!-- Color Preview -->
+                <View
+                    android:id="@+id/colorPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@color/teal_700"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/tvAppThemeColor" />
+
+                <TextView
+                    android:id="@+id/tvColorPreviewLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Color Preview"
+                    android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/colorPreview" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Save Button -->
+        <Button
+                android:id="@+id/btnSaveSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/save_settings"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/cardAppearanceSettings" />
+
+        <!-- Save Button -->
+        <Button
+                android:id="@+id/btnResetSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/white"
+                android:textColor="@color/black"
+                android:text="@string/reset_settings"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/btnSaveSettings" />
 
         <!-- "Powered by HichemTab" Text -->
         <TextView
@@ -205,6 +280,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Powered by HichemTab-tech"
+                android:visibility="gone"
                 android:textColor="@color/teal_700"
                 android:textSize="16sp"
                 android:textStyle="bold"

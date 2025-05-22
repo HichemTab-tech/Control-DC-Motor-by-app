@@ -2,9 +2,24 @@
     <string name="app_name">Control DC Motor</string>
     <string name="app_logo">Application Logo</string>
 
+    <!-- Splash Screen -->
+    <string name="university_name_ar">جامعة هواري بومدين للعلوم والتكنولوجيا</string>
+    <string name="university_name">Houari Boumediene University of Science and Technology\nUSTHB</string>
+    <string name="faculty_name">Faculty of Electric engineering</string>
+    <string name="project_title">DC Motor Control System</string>
+    <string name="project_description">A mobile application for controlling DC motors via Bluetooth</string>
+    <string name="student_1">Azzouni Nourane</string>
+    <string name="student_2">Hoceine Chaima</string>
+    <string name="professor_name">Mr. Dahman</string>
+    <string name="project_date">May 2025</string>
+    <string name="left_logo_desc">University Logo</string>
+    <string name="right_logo_desc">Faculty Logo</string>
+
     <!-- Bluetooth -->
     <string name="bluetooth_title">Bluetooth</string>
     <string name="bluetooth_scan">Scan</string>
+    <string name="zoom_in">Zoom in</string>
+    <string name="zoom_out">Zoom out</string>
     <string name="bluetooth_scanning">Scanning…</string>
     <string name="bluetooth_connect">Connect</string>
     <string name="bluetooth_disconnect">Disconnect</string>
@@ -33,6 +48,7 @@
     <string name="custom_logo">Custom Logo</string>
     <string name="upload_logo">Upload Logo</string>
     <string name="save_settings">Save Settings</string>
+    <string name="reset_settings">Reset Settings</string>
 
     <!-- Test Page -->
     <string name="test">Test</string>
@@ -45,4 +61,9 @@
     <string name="error_bluetooth_connection">Error connecting to device</string>
     <string name="error_bluetooth_communication">Communication error</string>
     <string name="error_permission_denied">Permission denied</string>
+    <string name="no_devices_found">No devices found</string>
+    <string name="zero">0</string>
+    <string name="response_time_chart">Response Time Chart</string>
+    <string name="this_chart_shows_the_response_time_between_commands_and_device_responses">This chart shows the response time between commands and device responses.</string>
+    <string name="powered_by_hichemtab_tech">Powered by HichemTab-tech</string>
 </resources>

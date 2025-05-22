@@ -1,10 +1,12 @@
 package com.hichemtabtech.controldcmotor.fragments;
 
+import android.bluetooth.BluetoothSocket;
 import android.os.Bundle;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.hichemtabtech.controldcmotor.MainActivity;
 import com.hichemtabtech.controldcmotor.R;
 import com.hichemtabtech.controldcmotor.databinding.FragmentTestBinding;
 import com.hichemtabtech.controldcmotor.utils.BluetoothConnectionManager;
@@ -30,13 +33,33 @@ public class TestFragment extends Fragment {
 
     private FragmentTestBinding binding;
     private SpannableStringBuilder terminalOutput;
-    private BluetoothConnectionManager connectionManager;
     private boolean isConnected = false;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         terminalOutput = new SpannableStringBuilder();
+        BluetoothConnectionManager.getInstance().addCallback(new BluetoothConnectionManager.ConnectionCallback() {
+            @Override
+            public void onConnected(BluetoothSocket socket) {
+
+            }
+
+            @Override
+            public void onConnectionFailed() {
+
+            }
+
+            @Override
+            public void onDisconnected() {
+
+            }
+
+            @Override
+            public void onReceive(String receivedData) {
+                appendToTerminal(receivedData, TerminalMessageType.RECEIVED);
+            }
+        });
     }
 
     @Nullable
@@ -59,6 +82,27 @@ public class TestFragment extends Fragment {
         
         // Add initial message
         appendToTerminal("Terminal ready. Connect to a device from the Control Panel tab to start sending commands.", TerminalMessageType.SYSTEM);
+
+
+        MainActivity mainActivity = (MainActivity) requireActivity();
+        mainActivity.getConnectionLiveData().observe(getViewLifecycleOwner(), socket -> {
+            this.isConnected = socket != null;
+
+            Log.d("TestFragment.log", "binding: " + (binding != null));
+
+            // Update UI on the main thread
+            if (binding != null) {
+                Log.d("TestFragment.log", "setConnectionManager: " + this.isConnected);
+                binding.btnSendCommand.setEnabled(this.isConnected);
+
+                if (this.isConnected) {
+                    appendToTerminal("Connected to device. Ready to send commands.", TerminalMessageType.SYSTEM);
+                } else {
+                    appendToTerminal("Disconnected from device.", TerminalMessageType.SYSTEM);
+                }
+            }
+        });
+
     }
 
     @Override
@@ -68,32 +112,10 @@ public class TestFragment extends Fragment {
     }
 
     /**
-     * Set the connection manager and update the UI accordingly.
-     *
-     * @param manager The Bluetooth connection manager.
-     * @param connected Whether a device is currently connected.
-     */
-    public void setConnectionManager(BluetoothConnectionManager manager, boolean connected) {
-        this.connectionManager = manager;
-        this.isConnected = connected;
-        
-        // Update UI on the main thread
-        if (binding != null) {
-            binding.btnSendCommand.setEnabled(connected);
-            
-            if (connected) {
-                appendToTerminal("Connected to device. Ready to send commands.", TerminalMessageType.SYSTEM);
-            } else {
-                appendToTerminal("Disconnected from device.", TerminalMessageType.SYSTEM);
-            }
-        }
-    }
-
-    /**
      * Send a command to the connected Bluetooth device.
      */
     private void sendCommand() {
-        if (!isConnected || connectionManager == null) {
+        if (!isConnected || BluetoothConnectionManager.getInstance() == null) {
             Toast.makeText(requireContext(), "Not connected to any device", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -105,7 +127,7 @@ public class TestFragment extends Fragment {
         }
         
         // Send the command
-        connectionManager.sendData(command);
+        BluetoothConnectionManager.getInstance().sendData(command);
         
         // Add to terminal
         appendToTerminal("Sent: " + command, TerminalMessageType.SENT);

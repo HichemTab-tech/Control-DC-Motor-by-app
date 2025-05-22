@@ -85,7 +85,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="No devices found"
+                    android:text="@string/no_devices_found"
                     android:visibility="gone"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -121,6 +121,42 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
+                <Button
+                        android:id="@+id/btnStart"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:layout_marginEnd="8dp"
+                        android:enabled="false"
+                        android:text="@string/start"
+                        app:layout_constraintEnd_toStartOf="@+id/btnStop"
+                        app:layout_constraintHorizontal_bias="0.5"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/tvControlPanelTitle" />
+
+                <Button
+                        android:id="@+id/btnStop"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:enabled="false"
+                        android:text="@string/stop"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintHorizontal_bias="0.5"
+                        app:layout_constraintStart_toEndOf="@+id/btnStart"
+                        app:layout_constraintTop_toTopOf="@+id/btnStart" />
+
+                <Button
+                        android:id="@+id/btnReset"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:enabled="false"
+                        android:text="@string/reset"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/btnStart" />
+
                 <!-- Direction Switch -->
                 <TextView
                     android:id="@+id/tvDirection"
@@ -130,7 +166,7 @@
                     android:text="@string/direction"
                     android:textAppearance="?attr/textAppearanceBody1"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvControlPanelTitle" />
+                    app:layout_constraintTop_toBottomOf="@+id/btnReset" />
 
                 <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/switchDirection"
@@ -168,59 +204,102 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:text="0"
+                    android:text="@string/zero"
                     app:layout_constraintBottom_toBottomOf="@+id/tvSpeed"
                     app:layout_constraintStart_toEndOf="@+id/tvSpeed"
                     app:layout_constraintTop_toTopOf="@+id/tvSpeed" />
 
+                <!-- Control Buttons -->
                 <com.google.android.material.slider.Slider
-                    android:id="@+id/sliderSpeed"
+                        android:id="@+id/sliderSpeed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:enabled="false"
+                        android:valueFrom="0"
+                        android:valueTo="255"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/tvSpeed"
+                        app:layout_constraintHorizontal_bias="1.0" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Real-time Chart Section -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardChart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="4dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/cardControlPanel">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/tvChartTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/response_time_chart"
+                    android:textAppearance="?attr/textAppearanceHeadline6"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                        android:id="@+id/charts_control"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/tvChartTitle"
+                        android:gravity="clip_horizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                    <Button
+                            app:layout_constraintStart_toStartOf="parent"
+                            android:id="@+id/btnZoomIn"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/zoom_in"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                    <Button
+                            app:layout_constraintEnd_toEndOf="parent"
+                            android:id="@+id/btnZoomOut"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/zoom_out"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/responseTimeChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="250dp"
+                    android:layout_marginTop="16dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/charts_control" />
+
+                <TextView
+                    android:id="@+id/tvChartDescription"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:enabled="false"
-                    android:valueFrom="0"
-                    android:valueTo="255"
+                    android:text="@string/this_chart_shows_the_response_time_between_commands_and_device_responses"
+                    android:textSize="12sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tvSpeed" />
-
-                <!-- Control Buttons -->
-                <Button
-                    android:id="@+id/btnStart"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:layout_marginEnd="8dp"
-                    android:enabled="false"
-                    android:text="@string/start"
-                    app:layout_constraintEnd_toStartOf="@+id/btnStop"
-                    app:layout_constraintHorizontal_bias="0.5"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/sliderSpeed" />
-
-                <Button
-                    android:id="@+id/btnStop"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:enabled="false"
-                    android:text="@string/stop"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintHorizontal_bias="0.5"
-                    app:layout_constraintStart_toEndOf="@+id/btnStart"
-                    app:layout_constraintTop_toTopOf="@+id/btnStart" />
-
-                <Button
-                    android:id="@+id/btnReset"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:enabled="false"
-                    android:text="@string/reset"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/btnStart" />
+                    app:layout_constraintTop_toBottomOf="@+id/responseTimeChart" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
